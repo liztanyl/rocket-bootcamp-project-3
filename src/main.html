@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Who Dis?</title>
+	</head>
+	<body>
+		<h1>Who Dis?</h1>
+		<div class="player-name"></div>
+		<div class="team-name"></div>
+		<!-- WELCOME SECTION (USER NOT LOGGED IN) -->
+
+		<div id="welcome-section">
+			<div id="welcome-div">
+				<p>Register or sign in to play</p>
+				<button id="show-signup">Sign up</button>
+				<button id="show-login">Log in</button>
+			</div>
+
+			<div id="signup-div" style="display: none">
+				<p>Create an account</p>
+				<div>
+					<label for="email-signup">Email address</label>
+					<input
+						type="email"
+						name="email-signup"
+						id="email-signup"
+						placeholder="Email address"
+					/>
+				</div>
+				<div>
+					<label for="password-signup">Password</label>
+					<input type="password" name="password-signup" id="password-signup" />
+				</div>
+				<div>
+					<label for="name-signup">Name</label>
+					<input
+						type="text"
+						name="name-signup"
+						id="name-signup"
+						placeholder="Name"
+					/>
+				</div>
+				<div id="signup-err-msg"></div>
+				<button id="signup-btn">Sign up</button>
+				<div>
+					<p>Already have an account?</p>
+					<button id="change-to-login">Log in</button>
+				</div>
+			</div>
+
+			<div id="login-div" style="display: none">
+				<p>Sign in to your account</p>
+				<div>
+					<label for="email-login">Email address</label>
+					<input
+						type="email"
+						name="email-login"
+						id="email-login"
+						placeholder="Email address"
+					/>
+				</div>
+				<div>
+					<label for="password-login">Password</label>
+					<input type="password" name="password-login" id="password-login" />
+				</div>
+				<div id="login-err-msg"></div>
+				<button id="login-btn">Log in</button>
+				<div>
+					<p>Don't have an account yet?</p>
+					<button id="change-to-signup">Sign up</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- GAME SETUP SECTION (BEFORE GAMEPLAY) -->
+
+		<div id="game-setup-section" style="display: none">
+			<div id="game-setup-div">
+				<button id="show-create-game">Create a Game</button>
+				<button id="show-join-game">Join a Game</button>
+				<button id="setup-show-rules">How to Play</button>
+			</div>
+
+			<div id="create-game-div" style="display: none">
+				<label for="team-one-name-input">Team 1 Name:</label>
+				<input
+					type="text"
+					name="team-one-name-input"
+					id="team-one-name-input"
+					placeholder="Team 1 Name"
+				/>
+				<label for="team-two-name-input">Team 2 Name:</label>
+				<input
+					type="text"
+					name="team-two-name-input"
+					id="team-two-name-input"
+					placeholder="Team 2 Name"
+				/>
+				<div id="create-game-err-msg"></div>
+				<button id="create-game-btn">Create Game</button>
+			</div>
+
+			<div id="game-created-div" style="display: none">
+				<p>Game created!</p>
+				<p>Game ID: <span id="game-id-span"></span></p>
+				<p>Your friends can join your game using the above ID.</p>
+				<p>In the meantime, choose your team.</p>
+				<div id="game-created-choose-team-div"></div>
+			</div>
+		</div>
+
+		<div id="join-game-div" style="display: none">
+			<div id="enter-game-id-div">
+				<label for="join-game-id">Game ID:</label>
+				<input type="number" id="join-game-id" name="join-game-id" />
+				<div id="join-game-err-msg"></div>
+				<button id="join-game-id-btn">Join Game</button>
+			</div>
+			<div id="join-game-choose-team-div" style="display: none"></div>
+		</div>
+
+		<div id="game-lobby-div" style="display: none">
+			<p>Wait for all players to join a team.</p>
+			<p>
+				After all players have chosen their teams, press start to begin the
+				game!
+			</p>
+			<button id="game-lobby-start-game-btn">Start Game</button>
+			<button id="lobby-show-rules">How to Play</button>
+			<div id="join-game-choose-team-div"></div>
+		</div>
+
+		<!-- GAME SECTION (DURING GAMEPLAY)-->
+
+		<div id="clue-giver-div" style="display: none">
+			<p>
+				You're up! You have 60 seconds to give clues so your team can guess the
+				person on the card.
+			</p>
+			<div id="round-info-div"></div>
+			<p>Whenever you're ready...</p>
+			<button id="clue-giver-start-turn-btn">Start turn</button>
+		</div>
+
+		<div id="card-view-div" style="display: none">
+			<div id="timer-div"></div>
+			<div id="card-div">
+				<div id="card-name-div"></div>
+				<div id="card-description-div"></div>
+				<div id="card-points-div"></div>
+			</div>
+			<button id="skip-card-btn">Skip</button>
+			<button id="guessed-card-btn">Guessed</button>
+		</div>
+
+		<div id="guesser-div" style="display: none">
+			<p>Your teammate is the clue giver.</p>
+			<p>Click next after their timer runs out.</p>
+			<button id="guesser-next-btn">Next</button>
+		</div>
+
+		<div id="waiting-team-div" style="display: none">
+			<p>It's the other team's turn.</p>
+			<p>Click next when their turn is over.</p>
+			<button id="waiting-team-next-btn">Next</button>
+		</div>
+
+		<div id="next-turn-div" style="display: none"></div>
+
+		<div id="round-over-div" style="display: none">
+			<p>All cards have been guessed! <span id="round-over-span"></span></p>
+			<button id="round-over-show-points-btn">View scores</button>
+		</div>
+
+		<div id="show-score-div" style="display: none">
+			<div id="team1-points-div"></div>
+			<div id="team2-points-div"></div>
+
+			<div id="end-round-points-div" style="display: none">
+				<div id="end-round-leader-div"></div>
+				<!-- <em
+					>Make sure everyone's on this page before starting the next round!</em
+				> -->
+				<button id="end-round-start-next-btn">Start next round</button>
+			</div>
+
+			<div id="final-points-div" style="display: none">
+				<div id="end-game-winner-div"></div>
+				<button id="end-game-go-home-btn">Back to Home</button>
+			</div>
+		</div>
+	</body>
+</html>
