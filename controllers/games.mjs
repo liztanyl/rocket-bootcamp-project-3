@@ -53,7 +53,6 @@ export default function initGamesController(db) {
         current_round: 1,
         current_team: 0,
         score: [0, 0],
-        team_ids: [],
         team1_userids: [],
         team2_userids: [],
       };
@@ -217,7 +216,7 @@ export default function initGamesController(db) {
   };
 
   const skipCard = async (req, res) => {
-    const { gameId } = req.body;
+    const gameId = req.params.id;
 
     // retrieve cardpiles (as obj so can update game later)
     const { card_piles: cardPiles } = await db.Game.findByPk(gameId);
@@ -238,7 +237,7 @@ export default function initGamesController(db) {
   };
 
   const guessedCard = async (req, res) => {
-    const { gameId } = req.body;
+    const gameId = req.params.id;
 
     // retrieve cardpiles & gamestate (as obj so can update game later)
     const {
@@ -324,6 +323,76 @@ export default function initGamesController(db) {
     }
   };
 
+  const endTurn = async (req, res) => {
+    // get game info
+    const gameId = req.params.id;
+
+    // retrieve cardpiles & gamestate (as objs so can update game later)
+    const {
+      card_piles: cardPiles,
+      game_state: gameState,
+      teams,
+    } = await db.Game.findByPk(gameId, { include: db.Team });
+
+    const { deck } = cardPiles;
+    let { current_team: currentTeamIndex } = gameState;
+    const {
+      currentRound,
+      score,
+      team1_userids: team1UserIds,
+      team2_userids: team2UserIds,
+    } = gameState;
+
+    // card that was open when timer ran out stays in deck (goes to end)
+    deck.push(deck.shift());
+
+    const previousTeamIndex = currentTeamIndex;
+
+    // rotate player order
+    currentTeamIndex === 0
+      ? team1UserIds.push(team1UserIds.shift())
+      : team2UserIds.push(team2UserIds.shift());
+
+    // alternate teams
+    currentTeamIndex = currentTeamIndex === 0 ? 1 : 0;
+
+    // update game info
+    cardPiles.deck = deck;
+    gameState.current_team = currentTeamIndex;
+    gameState.team1_userids = team1UserIds;
+    gameState.team2_userids = team2UserIds;
+
+    await db.Game.update({
+      card_piles: cardPiles,
+      game_state: gameState,
+    }, { where: { id: gameId } });
+
+    const teamsData = teams
+      .map((team) => ({
+        id: team.id,
+        name: team.name,
+      }))
+      .sort((a, b) => a.id - b.id);
+
+    const currentTeam = {
+      id: teamsData[currentTeamIndex].id,
+      name: teamsData[currentTeamIndex].name,
+      userIds: currentTeamIndex === 0
+        ? gameState.team1_userids
+        : gameState.team2_userids,
+    };
+
+    const dataToClient = {
+      currentRound,
+      score,
+      previousTeamIndex,
+      currentTeamIndex,
+      teams: teamsData,
+      currentTeam,
+    };
+    res.send(dataToClient);
+  };
+
   const checkGameStatus = async (req, res) => {
     const gameId = req.params.id;
 
@@ -346,10 +415,21 @@ export default function initGamesController(db) {
       },
       game_state: gameState, teams,
     } = game;
+
     const currentTeamIndex = gameState.current_team;
+    const previousTeamIndex = currentTeamIndex === 0 ? 1 : 0;
+
+    const teamsData = teams
+      .map((team) => ({
+        id: team.id,
+        name: team.name,
+        gameId: team.gameId,
+      }))
+      .sort((a, b) => a.id - b.id);
+
     const currentTeam = {
-      id: teams[currentTeamIndex].id,
-      name: teams[currentTeamIndex].name,
+      id: teamsData[currentTeamIndex].id,
+      name: teamsData[currentTeamIndex].name,
       userIds: currentTeamIndex === 0
         ? gameState.team1_userids
         : gameState.team2_userids,
@@ -359,15 +439,11 @@ export default function initGamesController(db) {
 
     const dataToClient = {
       currentRound: gameState.current_round,
-      currentTeam,
-      teams: teams
-        .map((team) => ({
-          id: team.id,
-          name: team.name,
-          gameId: team.gameId,
-        }))
-        .sort((a, b) => a.id - b.id),
       score: gameState.score,
+      previousTeamIndex,
+      currentTeamIndex,
+      teams: teamsData,
+      currentTeam,
     };
     if (gameState.current_round === 0) res.clearCookie('gameId').clearCookie('teamId');
     res.send(dataToClient);
@@ -381,6 +457,7 @@ export default function initGamesController(db) {
     startTurn,
     skipCard,
     guessedCard,
+    endTurn,
     checkGameStatus,
   };
 }

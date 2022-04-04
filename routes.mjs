@@ -24,7 +24,8 @@ export default function bindRoutes(app) {
   app.post('/join-game', gamesController.join);
   app.post('/start-game', gamesController.startGame);
   app.post('/start-turn/:id', gamesController.startTurn);
-  app.post('/skip-card', gamesController.skipCard);
-  app.post('/guessed-card', gamesController.guessedCard);
+  app.post('/skip-card/:id', gamesController.skipCard);
+  app.post('/guessed-card/:id', gamesController.guessedCard);
+  app.post('/end-turn/:id', gamesController.endTurn);
   app.post('/check-game-status/:id', gamesController.checkGameStatus);
 }

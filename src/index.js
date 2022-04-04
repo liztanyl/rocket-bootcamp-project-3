@@ -321,6 +321,8 @@ const waitingTeamDiv = document.querySelector('#waiting-team-div');
 const waitingTeamNextBtn = document.querySelector('#waiting-team-next-btn');
 
 const nextTurnDiv = document.querySelector('#next-turn-div');
+const teamTurnOverDiv = document.querySelector('#team-turn-over-div');
+const nextTurnBtn = document.querySelector('#next-turn-btn');
 
 const roundOverDiv = document.querySelector('#round-over-div');
 const roundOverSpan = document.querySelector('#round-over-span');
@@ -345,6 +347,7 @@ const currentTeam = {};
 const CLUEGIVER = 'clue giver';
 const GUESSER = 'guesser';
 const WAITINGTEAM = 'waiting team';
+let timerId;
 
 // ############# HELPER FUNCTIONS ##############
 
@@ -360,6 +363,33 @@ const checkRoleForCurrentTurn = (currentTeamDetails) => {
   }
   // if user is in opposing team
   return WAITINGTEAM;
+};
+
+const displayRoleDivs = (role) => {
+  switch (role) {
+    case CLUEGIVER:
+      changeDisplay(guesserDiv).hide();
+      changeDisplay(waitingTeamDiv).hide();
+      changeDisplay(clueGiverDiv).show();
+      break;
+    case GUESSER:
+      changeDisplay(clueGiverDiv).hide();
+      changeDisplay(waitingTeamDiv).hide();
+      changeDisplay(guesserDiv).show();
+      break;
+    default: // waiting team
+      changeDisplay(clueGiverDiv).hide();
+      changeDisplay(guesserDiv).hide();
+      changeDisplay(waitingTeamDiv).show();
+      break;
+  }
+};
+
+const updateTeamTurnOverDiv = (teamDetails) => {
+  teamTurnOverDiv.innerHTML = `
+  <p>Time's up! That's the end of Team '${teamDetails.previousTeam.name}'s turn!</p>
+  <p>Now it's time for Team '${teamDetails.currentTeam.name}' to give it a shot.</p>
+  `;
 };
 
 const updateRoundOverDiv = (nextRoundNum, score, teams) => {
@@ -408,6 +438,40 @@ const updateRoundOverDiv = (nextRoundNum, score, teams) => {
   }
 };
 
+const formatTimer = (ms) => {
+  // Show min:sec
+  // calculate minutes
+  let min = Math.floor((ms / 1000 / 60) % 60);
+  // calculate seconds
+  let sec = Math.floor((ms / 1000) % 60);
+
+  // add leading 0
+  if (min < 10) {
+    min = `0${min}`;
+  }
+  if (sec < 10) {
+    sec = `0${sec}`;
+  }
+  return `${min}:${sec}`;
+};
+
+const startTimer = () => {
+  const seconds = 10;
+  let milliseconds = seconds * 1000;
+  const delayInMilliseconds = 1000;
+
+  timerDiv.innerText = formatTimer(milliseconds);
+
+  const ref = setInterval(() => {
+    timerDiv.innerText = formatTimer(milliseconds);
+    if (milliseconds <= 0) clearInterval(ref);
+    milliseconds -= delayInMilliseconds;
+  }, delayInMilliseconds);
+
+  // eslint-disable-next-line no-use-before-define
+  timerId = setTimeout(submitEndTurn, milliseconds);
+};
+
 // ############# ONCLICK FUNCTIONS ##############
 
 const submitStartGameplay = () => {
@@ -428,23 +492,7 @@ const submitStartGameplay = () => {
         changeDisplay(gameLobbyDiv).hide();
         changeDisplay(roundOverDiv).hide();
         changeDisplay(showScoreDiv).hide();
-        switch (role) {
-          case CLUEGIVER:
-            changeDisplay(guesserDiv).hide();
-            changeDisplay(waitingTeamDiv).hide();
-            changeDisplay(clueGiverDiv).show();
-            break;
-          case GUESSER:
-            changeDisplay(clueGiverDiv).hide();
-            changeDisplay(waitingTeamDiv).hide();
-            changeDisplay(guesserDiv).show();
-            break;
-          default: // waiting team
-            changeDisplay(clueGiverDiv).hide();
-            changeDisplay(guesserDiv).hide();
-            changeDisplay(waitingTeamDiv).show();
-            break;
-        }
+        displayRoleDivs(role);
       }
     })
     .catch((error) => console.log(error));
@@ -454,8 +502,8 @@ const submitStartTurn = () => {
   const gameId = getDocumentCookie('gameId');
   axios.post(`/start-turn/${gameId}`)
     .then((response) => {
-      // !! TODO: ADD TIMER -------------------------------- !! !! !! !! !!
       console.log('card info', response.data);
+      startTimer();
       updateCardInfo(response.data);
       changeDisplay(clueGiverDiv).hide();
       changeDisplay(cardViewDiv).show();
@@ -464,7 +512,7 @@ const submitStartTurn = () => {
 
 const submitSkipCard = () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post('/skip-card', { gameId })
+  axios.post(`/skip-card/${gameId}`)
     .then((response) => {
       console.log('card info', response.data);
       updateCardInfo(response.data);
@@ -473,7 +521,7 @@ const submitSkipCard = () => {
 
 const submitGuessedCard = () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post('/guessed-card', { gameId })
+  axios.post(`/guessed-card/${gameId}`)
     .then((response) => {
       console.log('card info', response.data);
       // if still have cards in deck
@@ -481,6 +529,7 @@ const submitGuessedCard = () => {
 
       // if no more cards in deck (ie round is over)
       else {
+        clearTimeout(timerId);
         const {
           currentRound: nextRound,
           score,
@@ -496,28 +545,82 @@ const submitGuessedCard = () => {
     });
 };
 
+const submitEndTurn = () => {
+  const gameId = getDocumentCookie('gameId');
+  axios.post(`/end-turn/${gameId}`)
+    .then((response) => {
+      console.log('end turn', response.data);
+      const {
+        previousTeamIndex,
+        currentTeamIndex,
+        teams,
+      } = response.data;
+
+      const teamDetails = {
+        previousTeam: teams[previousTeamIndex],
+        currentTeam: teams[currentTeamIndex],
+      };
+
+      Object.entries(response.data.currentTeam)
+        .forEach(([key, value]) => {
+          currentTeam[key] = value;
+        });
+
+      updateTeamTurnOverDiv(teamDetails);
+      changeDisplay(cardViewDiv).hide();
+      changeDisplay(nextTurnDiv).show();
+      const role = checkRoleForCurrentTurn(currentTeam);
+
+      nextTurnBtn.onclick = () => {
+        changeDisplay(nextTurnDiv).hide();
+        displayRoleDivs(role);
+      };
+    });
+};
+
 const submitCheckGameStatus = () => {
   const gameId = getDocumentCookie('gameId');
   axios.post(`/check-game-status/${gameId}`)
     .then((response) => {
-      console.log('round & team info', response.data);
+      console.log('check round & team info', response.data);
       if (currentTeam.id !== response.data.currentTeam.id) {
         const {
           currentRound: nextRound,
           score,
+          previousTeamIndex,
+          currentTeamIndex,
           teams,
         } = response.data;
 
-        updateRoundOverDiv(nextRound, score, teams);
-        changeDisplay(guesserDiv).hide();
-        changeDisplay(waitingTeamDiv).hide();
-        changeDisplay(roundOverDiv).show();
-
-        currentRound = nextRound;
         Object.entries(response.data.currentTeam)
           .forEach(([key, value]) => {
             currentTeam[key] = value;
           });
+
+        if (currentRound === response.data.currentRound) {
+          const teamDetails = {
+            previousTeam: teams[previousTeamIndex],
+            currentTeam: teams[currentTeamIndex],
+          };
+
+          const role = checkRoleForCurrentTurn(currentTeam);
+
+          updateTeamTurnOverDiv(teamDetails);
+          changeDisplay(nextTurnDiv).show();
+
+          nextTurnBtn.onclick = () => {
+            changeDisplay(nextTurnDiv).hide();
+            displayRoleDivs(role);
+          };
+        } else {
+          updateRoundOverDiv(nextRound, score, teams);
+          changeDisplay(roundOverDiv).show();
+
+          currentRound = nextRound;
+        }
+
+        changeDisplay(guesserDiv).hide();
+        changeDisplay(waitingTeamDiv).hide();
       }
     });
 };
@@ -526,7 +629,7 @@ const submitStartNewRound = () => {
   const gameId = getDocumentCookie('gameId');
   axios.post(`/check-game-status/${gameId}`)
     .then((response) => {
-      console.log('round & team info', response.data);
+      console.log('start new round. round & team info', response.data);
       currentRound = response.data.currentRound;
       Object.entries(response.data.currentTeam).forEach(([key, value]) => {
         currentTeam[key] = value;
@@ -536,23 +639,7 @@ const submitStartNewRound = () => {
       changeDisplay(gameLobbyDiv).hide();
       changeDisplay(roundOverDiv).hide();
       changeDisplay(showScoreDiv).hide();
-      switch (role) {
-        case CLUEGIVER:
-          changeDisplay(guesserDiv).hide();
-          changeDisplay(waitingTeamDiv).hide();
-          changeDisplay(clueGiverDiv).show();
-          break;
-        case GUESSER:
-          changeDisplay(clueGiverDiv).hide();
-          changeDisplay(waitingTeamDiv).hide();
-          changeDisplay(guesserDiv).show();
-          break;
-        default: // waiting team
-          changeDisplay(clueGiverDiv).hide();
-          changeDisplay(guesserDiv).hide();
-          changeDisplay(waitingTeamDiv).show();
-          break;
-      }
+      displayRoleDivs(role);
     });
 };
 
