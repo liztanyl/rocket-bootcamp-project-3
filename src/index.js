@@ -128,11 +128,14 @@ const checkAuth = async () => {
   try {
     const { data } = await axios.post('/check-auth', { userId, loginHash });
     if (data.okay) {
+      // eslint-disable-next-line no-use-before-define
       updatePlayerNameDiv(data.userName);
+      // eslint-disable-next-line no-use-before-define
       changeDisplay(welcomeSectionDiv).hide();
       // eslint-disable-next-line no-use-before-define
       changeDisplay(gameSetupSectionDiv).show();
     } else {
+      // eslint-disable-next-line no-use-before-define
       changeDisplay(welcomeSectionDiv).show();
     } }
   catch (error) {
@@ -277,6 +280,7 @@ const updateTeamNameDiv = (teamName) => {
 };
 
 const updateRoundInfoDiv = () => {
+  roundInfoDiv.innerHTML = '';
   const round = document.createElement('p');
   round.innerHTML = `<b>It's round ${currentRound}.</b>`;
 
@@ -286,7 +290,7 @@ const updateRoundInfoDiv = () => {
       rule.innerHTML = 'You can use any word, sound or gesture. But not the name itself. If you use any part of the name, you have to skip that card. Reading the clue text is allowed.';
       break;
     case 2:
-      rule.innerHTML = 'Use only 1 word as a clue. It can be anything except thename itself. You can repeat that word as much as you like, but no sounds or gestures.';
+      rule.innerHTML = 'Use only 1 word as a clue. It can be anything except the name itself. You can repeat that word as much as you like, but no sounds or gestures.';
       break;
     default: // round 3
       rule.innerHTML = 'Act out the clues. No words. Sound effects are OK (within reason).';

@@ -11,7 +11,6 @@ export default function initTeamsModel(sequelize, DataTypes) {
         allowNull: false,
         type: DataTypes.STRING,
         validate: {
-          isAlphanumeric: true,
           notEmpty: true,
         },
       },

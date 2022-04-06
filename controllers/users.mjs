@@ -67,14 +67,19 @@ export default function initUsersController(db) {
     res.clearCookie('gameId').clearCookie('teamId');
     console.log(req.body);
     const { userId, loginHash } = req.body;
-    if (generateHash(Number(userId)) === loginHash) {
-      const { name } = await db.User.findByPk(userId);
-      res.send({ okay: true, userName: name });
-    } else {
-      res.clearCookie('userId')
-        .clearCookie('userName')
-        .clearCookie('login')
-        .send(false);
+    try {
+      if (generateHash(Number(userId)) === loginHash) {
+        const { name } = await db.User.findByPk(userId);
+        res.send({ okay: true, userName: name });
+      } else {
+        res.clearCookie('userId')
+          .clearCookie('userName')
+          .clearCookie('login')
+          .send(false);
+      }
+    } catch (error) {
+      console.log(error.message);
+      res.send(error);
     }
   };
 
