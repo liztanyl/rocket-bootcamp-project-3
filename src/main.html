@@ -353,18 +353,42 @@
 						<div id="card-description-div"></div>
 						<div id="card-points-div" class="h6 fw-bold my-3"></div>
 					</div>
-					<button id="skip-card-btn" class="btn btn-warning my-3">Skip</button>
-					<button id="guessed-card-btn" class="btn btn-success my-3">
+					<button id="skip-card-btn" class="btn btn-warning my-3 mx-2">
+						Skip
+					</button>
+					<button id="guessed-card-btn" class="btn btn-success my-3 mx-2">
 						Guessed
 					</button>
 				</div>
 
 				<div id="guesser-div" class="text-center" style="display: none">
 					<p class="h3 mb-3">Your teammate is the clue giver.</p>
+					<div class="border-top mt-5 pt-5">
+						<button
+							type="button"
+							id="setup-show-rules"
+							class="btn btn-secondary d-block mx-auto"
+							data-bs-toggle="modal"
+							data-bs-target="#how-to-play-modal"
+						>
+							How to Play
+						</button>
+					</div>
 				</div>
 
 				<div id="waiting-team-div" class="text-center" style="display: none">
 					<p class="h3 mb-3">It's the other team's turn.</p>
+					<div class="border-top mt-5 pt-5">
+						<button
+							type="button"
+							id="setup-show-rules"
+							class="btn btn-secondary d-block mx-auto"
+							data-bs-toggle="modal"
+							data-bs-target="#how-to-play-modal"
+						>
+							How to Play
+						</button>
+					</div>
 				</div>
 
 				<div id="next-turn-div" class="text-center" style="display: none">
