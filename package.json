@@ -27,8 +27,11 @@
 		"mini-css-extract-plugin": "^2.6.0",
 		"node-sass": "^7.0.1",
 		"pg": "^8.7.3",
+		"regenerator-runtime": "^0.13.9",
 		"sass-loader": "^12.6.0",
 		"sequelize": "^6.17.0",
+		"socket.io": "^4.4.1",
+		"socket.io-client": "^4.4.1",
 		"webpack-merge": "^5.8.0"
 	},
 	"scripts": {

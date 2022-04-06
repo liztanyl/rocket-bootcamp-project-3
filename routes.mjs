@@ -19,6 +19,7 @@ export default function bindRoutes(app) {
   });
   app.post('/signup', usersController.create);
   app.post('/login', usersController.login);
+  app.post('/check-auth', usersController.checkAuth);
   app.post('/create-game', gamesController.create);
   app.post('/choose-team', gamesController.chooseTeam);
   app.post('/join-game', gamesController.join);

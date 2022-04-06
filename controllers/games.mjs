@@ -39,7 +39,7 @@ export default function initGamesController(db) {
     const { team1name, team2name } = req.body;
     try {
       // get all cards from db, shuffle, slice and insert as card_piles.deck
-      const deckSize = 5;
+      const deckSize = 10;
       const cards = await db.Card.findAll();
       const deck = shuffleCards(cards).slice(0, deckSize);
 
@@ -99,7 +99,17 @@ export default function initGamesController(db) {
     res.clearCookie('gameId')
       .clearCookie('teamId');
     const { gameId } = req.body;
-    const teams = await db.Team.findAll({ where: { gameId } });
+    const game = await db.Game.findByPk(gameId, { include: db.Team });
+    // eslint-disable-next-line no-unused-expressions
+    if (game === null) {
+      res.send({ error: 'Game doesn\'t exist.' });
+      return;
+    }
+    if (game.game_state.current_round === 0) {
+      res.send({ error: 'Game has ended.' });
+      return;
+    }
+    const { teams } = game;
     const dataToClient = teams
       .map((team) => ({
         id: team.id,
@@ -174,8 +184,8 @@ export default function initGamesController(db) {
     const { game_state: gameState, teams } = game;
     teams.sort((a, b) => a.id - b.id);
     // update game with each team's userids
-    gameState.team1_userids = teams[0].users.map((user) => user.id);
-    gameState.team2_userids = teams[1].users.map((user) => user.id);
+    gameState.team1_userids = teams[0]?.users.map((user) => user.id);
+    gameState.team2_userids = teams[1]?.users.map((user) => user.id);
     await db.Game.update({ game_state: gameState }, { where: { id: gameId } });
 
     // prepare info about current team to send to client
@@ -284,7 +294,6 @@ export default function initGamesController(db) {
       currentRound === 3
         ? currentRound = 0
         : currentRound += 1;
-      if (currentRound === 0) res.clearCookie('gameId').clearCookie('teamId');
 
       // change user for currentTeam
       currentTeam === 0

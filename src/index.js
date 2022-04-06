@@ -1,5 +1,9 @@
 import axios from 'axios';
+import 'regenerator-runtime/runtime';
 import './styles.scss';
+import { io } from 'socket.io-client';
+
+const socket = io();
 
 //
 // ##############################################################
@@ -32,14 +36,18 @@ const getDocumentCookie = (cookieName) => {
  */
 const generateTeamNameBtns = (div, parentDiv, teamsArr) => {
   const introDiv = document.createElement('div');
-  introDiv.innerText = 'Choose your team:';
-  div.append(introDiv);
+  introDiv.innerText = 'Choose your team';
+  introDiv.classList.add('h5', 'text-center');
+
+  const btnDiv = document.createElement('div');
+  btnDiv.classList.add('text-center', 'py-3');
 
   // create 2 buttons with team names
   teamsArr.forEach((team) => {
     const btn = document.createElement('button');
     btn.value = team.id;
     btn.innerText = team.name;
+    btn.classList.add('btn', 'btn-danger', 'mx-3');
 
     btn.onclick = () => {
       // eslint-disable-next-line no-use-before-define
@@ -47,8 +55,11 @@ const generateTeamNameBtns = (div, parentDiv, teamsArr) => {
       div.innerHTML = '';
     };
 
-    div.append(btn);
+    btnDiv.append(btn);
   });
+
+  div.append(introDiv);
+  div.append(btnDiv);
 };
 
 const changeDisplay = (elementVar) => {
@@ -67,6 +78,7 @@ const addErrorMsgToDiv = (id, text) => {
   const divId = `#${id}`;
   const div = document.querySelector(divId);
   div.innerText = errMsg;
+  div.classList.add('my-3');
 };
 
 const resetSignupFields = () => {
@@ -89,6 +101,16 @@ const resetGameIdField = () => {
   document.querySelector('#join-game-id').value = '';
 };
 
+const updatePlayerNameDiv = (playerName) => {
+  // eslint-disable-next-line no-use-before-define
+  playerNameDiv.innerHTML = `Signed in as: ${playerName}`;
+};
+
+const updateTeamNameDiv = (teamName) => {
+  // eslint-disable-next-line no-use-before-define
+  teamNameDiv.innerHTML = `Team: ${teamName}`;
+};
+
 /**
  * Function to update cardNameDiv, cardDescDiv & cardPointsDiv with new card info
  * @param cardDetails object containing cardName, cardDesc & cardPoints
@@ -100,7 +122,7 @@ const updateCardInfo = (cardDetails) => {
   // eslint-disable-next-line no-use-before-define
   cardDescDiv.innerText = cardDescription;
   // eslint-disable-next-line no-use-before-define
-  cardPointsDiv.innerText = cardPoints;
+  cardPointsDiv.innerText = `${cardPoints} points`;
 };
 
 //
@@ -126,47 +148,70 @@ const changeToLoginBtn = document.querySelector('#change-to-login');
 const signupBtn = document.querySelector('#signup-btn');
 const loginBtn = document.querySelector('#login-btn');
 
+const playerNameDiv = document.querySelector('#player-name');
+const teamNameDiv = document.querySelector('#team-name');
+
 // ############# ONCLICK FUNCTIONS ##############
 
-const submitUserSignup = () => {
+const checkAuth = async () => {
+  const userId = getDocumentCookie('userId');
+  const loginHash = getDocumentCookie('login');
+  try {
+    const { data } = await axios.post('/check-auth', { userId, loginHash });
+    if (data.okay) {
+      updatePlayerNameDiv(data.userName);
+      changeDisplay(welcomeSectionDiv).hide();
+      // eslint-disable-next-line no-use-before-define
+      changeDisplay(gameSetupSectionDiv).show();
+    } else {
+      changeDisplay(welcomeSectionDiv).show();
+    } }
+  catch (error) {
+    console.log('something went wrong');
+  }
+};
+
+const submitUserSignup = async () => {
   const userData = {
     email: document.querySelector('#email-signup').value,
     password: document.querySelector('#password-signup').value,
     name: document.querySelector('#name-signup').value,
   };
-  axios.post('/signup', userData)
-    .then((response) => {
-      if (response.data.errors) { throw new Error('error'); }
-      else {
-        console.log('signup info', response.data);
-        changeDisplay(document.querySelector('#signup-err-msg')).hide();
-        resetSignupFields();
-        changeDisplay(welcomeSectionDiv).hide();
-        changeDisplay(gameSetupSectionDiv).show();
-      }
-    })
-    .catch(() => {
-      addErrorMsgToDiv('signup-err-msg', 'standard');
-    });
+  try {
+    const { data } = await axios.post('/signup', userData);
+    if (data.errors) { throw new Error('error'); }
+    else {
+      console.log('signup info', data);
+      changeDisplay(document.querySelector('#signup-err-msg')).hide();
+      resetSignupFields();
+      updatePlayerNameDiv(userData.name);
+      changeDisplay(welcomeSectionDiv).hide();
+      // eslint-disable-next-line no-use-before-define
+      changeDisplay(gameSetupSectionDiv).show();
+    }
+  } catch (error) {
+    addErrorMsgToDiv('signup-err-msg', 'standard');
+  }
 };
 
-const submitUserLogin = () => {
+const submitUserLogin = async () => {
   const userData = {
     email: document.querySelector('#email-login').value,
     password: document.querySelector('#password-login').value,
   };
-  console.log(userData);
-  axios.post('/login', userData)
-    .then((response) => {
-      if (response.data.errors) { throw new Error('error'); }
-      console.log('login info', response.data);
-      resetLoginFields();
-      changeDisplay(welcomeSectionDiv).hide();
-      changeDisplay(gameSetupSectionDiv).show();
-    })
-    .catch(() => {
-      addErrorMsgToDiv('login-err-msg', 'standard');
-    });
+  try {
+    const { data } = await axios.post('/login', userData);
+    if (data.errors) { throw new Error('error'); }
+    console.log('login info', data);
+    resetLoginFields();
+    updatePlayerNameDiv(data.userName);
+    changeDisplay(welcomeSectionDiv).hide();
+    // eslint-disable-next-line no-use-before-define
+    changeDisplay(gameSetupSectionDiv).show();
+  }
+  catch (error) {
+    addErrorMsgToDiv('login-err-msg', 'standard');
+  }
 };
 
 // ############## DOM MANIPULATION ##############
@@ -180,10 +225,12 @@ showLoginBtn.onclick = () => {
   changeDisplay(loginDiv).show();
 };
 changeToSignupBtn.onclick = () => {
+  resetLoginFields();
   changeDisplay(loginDiv).hide();
   changeDisplay(signupDiv).show();
 };
 changeToLoginBtn.onclick = () => {
+  resetSignupFields();
   changeDisplay(signupDiv).hide();
   changeDisplay(loginDiv).show();
 };
@@ -219,56 +266,72 @@ const enterGameIdDiv = document.querySelector('#enter-game-id-div');
 const joinGameBtn = document.querySelector('#join-game-id-btn');
 const joinGameChooseTeamDiv = document.querySelector('#join-game-choose-team-div');
 
+const changeToJoinGameBtn = document.querySelector('#change-to-join-game');
+const changeToCreateGameBtn = document.querySelector('#change-to-create-game');
+
 // ############# ONCLICK FUNCTIONS ##############
 
-const submitCreateGame = () => {
+const submitCreateGame = async () => {
   const teamData = {
     team1name: document.querySelector('#team-one-name-input').value,
     team2name: document.querySelector('#team-two-name-input').value,
   };
-  axios.post('/create-game', teamData)
-    .then((response) => {
-      if (response.data.errors) { throw new Error('error'); }
-      console.log('game info', response.data);
-      resetTeamNameFields();
-      gameIdSpan.innerText = response.data.gameId;
-      generateTeamNameBtns(gameCreatedChooseTeamDiv, gameCreatedDiv, response.data.teams);
-      changeDisplay(createGameDiv).hide();
-      changeDisplay(gameCreatedDiv).show();
-    })
-    .catch(() => {
-      addErrorMsgToDiv('create-game-err-msg', 'standard');
+  const { data } = await axios.post('/create-game', teamData);
+  try {
+    if (data.errors) { throw new Error('error'); }
+    console.log('game info', data);
+    resetTeamNameFields();
+    gameIdSpan.innerText = data.gameId;
+    socket.emit('join-room', data.gameId, (result) => {
+      console.log(result.data);
     });
+
+    generateTeamNameBtns(gameCreatedChooseTeamDiv,
+      gameCreatedDiv, data.teams);
+    changeDisplay(createGameDiv).hide();
+    changeDisplay(gameCreatedDiv).show();
+  } catch (error) {
+    addErrorMsgToDiv('create-game-err-msg', 'standard');
+  }
 };
 
-const submitJoinGame = () => {
+const submitJoinGame = async () => {
   const gameId = document.querySelector('#join-game-id').valueAsNumber;
-  axios.post('/join-game', { gameId })
-    .then((response) => {
-      console.log('teams', response.data);
-      resetGameIdField();
-      generateTeamNameBtns(joinGameChooseTeamDiv, joinGameDiv, response.data);
-      changeDisplay(enterGameIdDiv).hide();
-      changeDisplay(joinGameChooseTeamDiv).show();
-    })
-    .catch((error) => {
-      console.log(error);
-      addErrorMsgToDiv('join-game-err-msg', 'standard');
+  try {
+    const { data } = await axios.post('/join-game', { gameId });
+    console.log('teams', data);
+
+    if (data.error) {
+      addErrorMsgToDiv('join-game-err-msg', data.error);
+      return;
+    }
+
+    socket.emit('join-room', gameId, (result) => {
+      console.log(result.data);
     });
+
+    resetGameIdField();
+    generateTeamNameBtns(joinGameChooseTeamDiv, joinGameDiv, data);
+    changeDisplay(enterGameIdDiv).hide();
+    changeDisplay(joinGameChooseTeamDiv).show();
+  } catch (error) {
+    console.log(error);
+    addErrorMsgToDiv('join-game-err-msg', 'standard');
+  }
 };
 
-const submitChooseTeam = (fromDiv, teamId) => {
+const submitChooseTeam = async (fromDiv, teamId) => {
   const userTeamData = {
     userId: getDocumentCookie('userId'),
     gameId: getDocumentCookie('gameId'),
     teamId,
   };
-  axios.post('/choose-team', userTeamData)
-    .then((response) => {
-      console.log('chosen team', response.data);
-      changeDisplay(fromDiv).hide();
-      changeDisplay(gameLobbyDiv).show();
-    });
+  const { data } = await axios.post('/choose-team', userTeamData);
+  console.log('chosen team', data);
+  updateTeamNameDiv(data.teamName);
+  changeDisplay(fromDiv).hide();
+  // eslint-disable-next-line no-use-before-define
+  changeDisplay(gameLobbyDiv).show();
 };
 
 // ############## DOM MANIPULATION ##############
@@ -289,6 +352,17 @@ showJoinGameBtn.onclick = () => {
 
 createGameBtn.onclick = submitCreateGame;
 joinGameBtn.onclick = submitJoinGame;
+
+changeToJoinGameBtn.onclick = () => {
+  resetTeamNameFields();
+  changeDisplay(createGameDiv).hide();
+  changeDisplay(joinGameDiv).show();
+};
+changeToCreateGameBtn.onclick = () => {
+  resetGameIdField();
+  changeDisplay(joinGameDiv).hide();
+  changeDisplay(createGameDiv).show();
+};
 
 //
 // ##############################################################
@@ -316,19 +390,14 @@ const skipCardBtn = document.querySelector('#skip-card-btn');
 const guessedCardBtn = document.querySelector('#guessed-card-btn');
 
 const guesserDiv = document.querySelector('#guesser-div');
-const guesserNextBtn = document.querySelector('#guesser-next-btn');
 const waitingTeamDiv = document.querySelector('#waiting-team-div');
-const waitingTeamNextBtn = document.querySelector('#waiting-team-next-btn');
 
 const nextTurnDiv = document.querySelector('#next-turn-div');
 const teamTurnOverDiv = document.querySelector('#team-turn-over-div');
 const nextTurnBtn = document.querySelector('#next-turn-btn');
 
-const roundOverDiv = document.querySelector('#round-over-div');
-const roundOverSpan = document.querySelector('#round-over-span');
-const roundOverShowPointsBtn = document.querySelector('#round-over-show-points-btn');
-
 const showScoreDiv = document.querySelector('#show-score-div');
+const roundOverSpan = document.querySelector('#round-over-span');
 const team1PointsDiv = document.querySelector('#team1-points-div');
 const team2PointsDiv = document.querySelector('#team2-points-div');
 
@@ -351,7 +420,7 @@ let timerId;
 
 // ############# HELPER FUNCTIONS ##############
 
-const checkRoleForCurrentTurn = (currentTeamDetails) => {
+const getRoleForCurrentTurn = (currentTeamDetails) => {
   // if user is in current team
   if (getDocumentCookie('teamId') === currentTeamDetails.id) {
     // if user is clue giver
@@ -368,18 +437,29 @@ const checkRoleForCurrentTurn = (currentTeamDetails) => {
 const displayRoleDivs = (role) => {
   switch (role) {
     case CLUEGIVER:
+      changeDisplay(gameLobbyDiv).hide();
       changeDisplay(guesserDiv).hide();
       changeDisplay(waitingTeamDiv).hide();
+
       changeDisplay(clueGiverDiv).show();
+      changeDisplay(nextTurnBtn).show();
       break;
+
     case GUESSER:
+      changeDisplay(gameLobbyDiv).hide();
       changeDisplay(clueGiverDiv).hide();
       changeDisplay(waitingTeamDiv).hide();
+      changeDisplay(nextTurnBtn).hide();
+
       changeDisplay(guesserDiv).show();
       break;
+
     default: // waiting team
+      changeDisplay(gameLobbyDiv).hide();
       changeDisplay(clueGiverDiv).hide();
       changeDisplay(guesserDiv).hide();
+      changeDisplay(nextTurnBtn).hide();
+
       changeDisplay(waitingTeamDiv).show();
       break;
   }
@@ -387,39 +467,35 @@ const displayRoleDivs = (role) => {
 
 const updateTeamTurnOverDiv = (teamDetails) => {
   teamTurnOverDiv.innerHTML = `
-  <p>Time's up! That's the end of Team '${teamDetails.previousTeam.name}'s turn!</p>
+  <p class="h3 mb-3 fw-bold">Time's up!</p> 
+  <p>That's the end of Team '${teamDetails.previousTeam.name}'s turn!</p>
   <p>Now it's time for Team '${teamDetails.currentTeam.name}' to give it a shot.</p>
   `;
 };
 
-const updateRoundOverDiv = (nextRoundNum, score, teams) => {
+const updateShowScoreDiv = (nextRoundNum, score, teams) => {
   const roundNum = nextRoundNum === 0 ? 3 : nextRoundNum - 1;
   roundOverSpan.innerText = `That's it for Round ${roundNum}.`;
 
   // update scores in team1pointsdiv and team2pointsdiv
   team1PointsDiv.innerHTML = `
-    Team name: ${teams[0].name}<br>
-    Points scored: ${score[0]}
+    <p class="h6">Team: ${teams[0].name}</p>
+    <p class="h6">${score[0]} points</p>
     `;
   team2PointsDiv.innerHTML = `
-    Team name: ${teams[1].name}<br>
-    Points scored: ${score[1]}
+    <p class="h6">Team: ${teams[1].name}</p>
+    <p class="h6">${score[1]} points</p>
     `;
 
   // if there are still rounds to go (nextRound !== 0)
   // update leading team & next button to toggle its display
   if (nextRoundNum > 0) {
-    endRoundLeaderDiv.innerText = score[0] > score[1]
-      ? `Team '${teams[0].name}' is in the lead!`
-      : `Team '${teams[1].name}' is in the lead!`;
-    if (score[0] === score[1]) endRoundLeaderDiv.innerText = 'It\'s currently a draw!';
-
-    roundOverShowPointsBtn.onclick = () => {
-      changeDisplay(roundOverDiv).hide();
-      changeDisplay(showScoreDiv).show();
-      changeDisplay(endRoundPointsDiv).show();
-      changeDisplay(finalPointsDiv).hide();
-    };
+    endRoundLeaderDiv.innerHTML = score[0] > score[1]
+      ? `<p class="h5">Team '${teams[0].name}' is in the lead!</p>`
+      : `<p class="h5">Team '${teams[1].name}' is in the lead!</p>`;
+    if (score[0] === score[1]) endRoundLeaderDiv.innerhtml = '<p class="h5 ">It\'s currently a draw!</p>';
+    changeDisplay(finalPointsDiv).hide();
+    changeDisplay(endRoundPointsDiv).show();
   }
   // if this is the last round (nextRound === 0)
   // update winner div & next button to toggle its display
@@ -427,14 +503,9 @@ const updateRoundOverDiv = (nextRoundNum, score, teams) => {
     const winningTeam = score[0] > score[1]
       ? teams[0].name
       : teams[1].name;
-    endGameWinnerDiv.innerText = `Team '${winningTeam}' wins!`;
-
-    roundOverShowPointsBtn.onclick = () => {
-      changeDisplay(roundOverDiv).hide();
-      changeDisplay(showScoreDiv).show();
-      changeDisplay(endRoundPointsDiv).hide();
-      changeDisplay(finalPointsDiv).show();
-    };
+    endGameWinnerDiv.innerHTML = `<p class="h5">Team '${winningTeam}' wins!</p>`;
+    changeDisplay(endRoundPointsDiv).hide();
+    changeDisplay(finalPointsDiv).show();
   }
 };
 
@@ -456,7 +527,7 @@ const formatTimer = (ms) => {
 };
 
 const startTimer = () => {
-  const seconds = 10;
+  const seconds = 30;
   let milliseconds = seconds * 1000;
   const delayInMilliseconds = 1000;
 
@@ -472,175 +543,177 @@ const startTimer = () => {
   timerId = setTimeout(submitEndTurn, milliseconds);
 };
 
+const updateCurrentTeam = (responseCurrentTeam) => {
+  Object.entries(responseCurrentTeam)
+    .forEach(([key, value]) => {
+      currentTeam[key] = value;
+    });
+};
+
 // ############# ONCLICK FUNCTIONS ##############
 
-const submitStartGameplay = () => {
+const submitStartGameplay = async () => {
   const gameInfo = {
     gameId: getDocumentCookie('gameId'),
     teamId: getDocumentCookie('teamId'),
   };
 
-  axios.post('/start-game', gameInfo)
-    .then((response) => {
-      console.log('round & team info', response.data);
-      if (currentTeam.id !== response.data.currentTeam.id) {
-        currentRound = response.data.currentRound;
-        Object.entries(response.data.currentTeam).forEach(([key, value]) => {
-          currentTeam[key] = value;
-        });
-        const role = checkRoleForCurrentTurn(currentTeam);
-        changeDisplay(gameLobbyDiv).hide();
-        changeDisplay(roundOverDiv).hide();
-        changeDisplay(showScoreDiv).hide();
-        displayRoleDivs(role);
-      }
-    })
-    .catch((error) => console.log(error));
+  const { data } = await axios.post('/start-game', gameInfo);
+  console.log('round & team info', data);
+
+  if (currentTeam.id !== data.currentTeam.id) {
+    currentRound = data.currentRound;
+    updateCurrentTeam(data.currentTeam);
+
+    const role = getRoleForCurrentTurn(currentTeam);
+    changeDisplay(gameLobbyDiv).hide();
+    changeDisplay(showScoreDiv).hide();
+    displayRoleDivs(role);
+  }
 };
 
-const submitStartTurn = () => {
+const submitStartTurn = async () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post(`/start-turn/${gameId}`)
-    .then((response) => {
-      console.log('card info', response.data);
-      startTimer();
-      updateCardInfo(response.data);
-      changeDisplay(clueGiverDiv).hide();
-      changeDisplay(cardViewDiv).show();
-    });
+  const { data } = await axios.post(`/start-turn/${gameId}`);
+  console.log('card info', data);
+
+  startTimer();
+  updateCardInfo(data);
+  changeDisplay(clueGiverDiv).hide();
+  changeDisplay(cardViewDiv).show();
 };
 
-const submitSkipCard = () => {
+const submitSkipCard = async () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post(`/skip-card/${gameId}`)
-    .then((response) => {
-      console.log('card info', response.data);
-      updateCardInfo(response.data);
-    });
+  const { data } = await axios.post(`/skip-card/${gameId}`);
+  console.log('card info', data);
+  updateCardInfo(data);
 };
 
-const submitGuessedCard = () => {
+const submitGuessedCard = async () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post(`/guessed-card/${gameId}`)
-    .then((response) => {
-      console.log('card info', response.data);
-      // if still have cards in deck
-      if (response.data.cards) { updateCardInfo(response.data.cards); }
+  const { data } = await axios.post(`/guessed-card/${gameId}`);
+  console.log('card info', data);
 
-      // if no more cards in deck (ie round is over)
-      else {
-        clearTimeout(timerId);
-        const {
-          currentRound: nextRound,
-          score,
-          teams,
-        } = response.data;
+  // if still have cards in deck
+  if (data.cards) { updateCardInfo(data.cards); }
 
-        updateRoundOverDiv(nextRound, score, teams);
-        changeDisplay(cardViewDiv).hide();
-        changeDisplay(roundOverDiv).show();
+  // if no more cards in deck (ie round is over)
+  else {
+    clearTimeout(timerId);
 
-        currentRound = nextRound;
-      }
-    });
+    const {
+      currentRound: nextRound,
+      score,
+      teams,
+    } = data;
+
+    updateShowScoreDiv(nextRound, score, teams);
+    changeDisplay(cardViewDiv).hide();
+    changeDisplay(showScoreDiv).show();
+
+    currentRound = nextRound;
+
+    socket.emit('empty-deck', gameId); // to everyone else in room
+  }
 };
 
-const submitEndTurn = () => {
+const submitEndTurn = async () => {
   const gameId = getDocumentCookie('gameId');
-  axios.post(`/end-turn/${gameId}`)
-    .then((response) => {
-      console.log('end turn', response.data);
-      const {
-        previousTeamIndex,
-        currentTeamIndex,
-        teams,
-      } = response.data;
+  const { data } = await axios.post(`/end-turn/${gameId}`);
+  console.log('end turn', data);
 
-      const teamDetails = {
-        previousTeam: teams[previousTeamIndex],
-        currentTeam: teams[currentTeamIndex],
-      };
+  const {
+    previousTeamIndex,
+    currentTeamIndex,
+    teams,
+  } = data;
 
-      Object.entries(response.data.currentTeam)
-        .forEach(([key, value]) => {
-          currentTeam[key] = value;
-        });
+  updateCurrentTeam(data.currentTeam);
+  updateTeamTurnOverDiv({
+    previousTeam: teams[previousTeamIndex],
+    currentTeam: teams[currentTeamIndex],
+  });
 
-      updateTeamTurnOverDiv(teamDetails);
-      changeDisplay(cardViewDiv).hide();
-      changeDisplay(nextTurnDiv).show();
-      const role = checkRoleForCurrentTurn(currentTeam);
+  const role = getRoleForCurrentTurn(currentTeam);
+  nextTurnBtn.onclick = () => {
+    changeDisplay(nextTurnDiv).hide();
+    displayRoleDivs(role);
+  };
 
-      nextTurnBtn.onclick = () => {
-        changeDisplay(nextTurnDiv).hide();
-        displayRoleDivs(role);
-      };
-    });
+  changeDisplay(cardViewDiv).hide();
+  changeDisplay(nextTurnDiv).show();
+
+  socket.emit('end-turn', gameId);
 };
 
-const submitCheckGameStatus = () => {
+const submitCheckGameStatus = async (isRoundOver) => {
   const gameId = getDocumentCookie('gameId');
-  axios.post(`/check-game-status/${gameId}`)
-    .then((response) => {
-      console.log('check round & team info', response.data);
-      if (currentTeam.id !== response.data.currentTeam.id) {
-        const {
-          currentRound: nextRound,
-          score,
-          previousTeamIndex,
-          currentTeamIndex,
-          teams,
-        } = response.data;
+  const { data } = await axios.post(`/check-game-status/${gameId}`);
+  const {
+    currentRound: nextRound,
+    score,
+    previousTeamIndex,
+    currentTeamIndex,
+    teams,
+  } = data;
+  console.log('check round & team info', data);
 
-        Object.entries(response.data.currentTeam)
-          .forEach(([key, value]) => {
-            currentTeam[key] = value;
-          });
+  // update currentTeam if different
+  if (currentTeam.id !== data.currentTeam.id) {
+    updateCurrentTeam(data.currentTeam);
+  }
 
-        if (currentRound === response.data.currentRound) {
-          const teamDetails = {
-            previousTeam: teams[previousTeamIndex],
-            currentTeam: teams[currentTeamIndex],
-          };
+  // if coming from socket round-over
+  if (isRoundOver) {
+    updateShowScoreDiv(nextRound, score, teams);
+    changeDisplay(showScoreDiv).show();
+  }
+  // if game was updated and round is over
+  else if (currentRound !== nextRound) {
+    updateShowScoreDiv(nextRound, score, teams);
+    changeDisplay(showScoreDiv).show();
 
-          const role = checkRoleForCurrentTurn(currentTeam);
+    currentRound = nextRound;
+  }
+  // if same round, different turn
+  else {
+    const teamDetails = {
+      previousTeam: teams[previousTeamIndex],
+      currentTeam: teams[currentTeamIndex],
+    };
 
-          updateTeamTurnOverDiv(teamDetails);
-          changeDisplay(nextTurnDiv).show();
+    const role = getRoleForCurrentTurn(currentTeam);
 
-          nextTurnBtn.onclick = () => {
-            changeDisplay(nextTurnDiv).hide();
-            displayRoleDivs(role);
-          };
-        } else {
-          updateRoundOverDiv(nextRound, score, teams);
-          changeDisplay(roundOverDiv).show();
+    updateTeamTurnOverDiv(teamDetails);
+    changeDisplay(nextTurnDiv).show();
+    role === CLUEGIVER
+      ? changeDisplay(nextTurnBtn).show()
+      : changeDisplay(nextTurnBtn).hide();
 
-          currentRound = nextRound;
-        }
-
-        changeDisplay(guesserDiv).hide();
-        changeDisplay(waitingTeamDiv).hide();
-      }
-    });
-};
-
-const submitStartNewRound = () => {
-  const gameId = getDocumentCookie('gameId');
-  axios.post(`/check-game-status/${gameId}`)
-    .then((response) => {
-      console.log('start new round. round & team info', response.data);
-      currentRound = response.data.currentRound;
-      Object.entries(response.data.currentTeam).forEach(([key, value]) => {
-        currentTeam[key] = value;
-      });
-
-      const role = checkRoleForCurrentTurn(currentTeam);
-      changeDisplay(gameLobbyDiv).hide();
-      changeDisplay(roundOverDiv).hide();
-      changeDisplay(showScoreDiv).hide();
+    nextTurnBtn.onclick = () => {
+      changeDisplay(nextTurnDiv).hide();
       displayRoleDivs(role);
-    });
+    };
+  }
+
+  changeDisplay(guesserDiv).hide();
+  changeDisplay(waitingTeamDiv).hide();
+};
+
+const submitStartNewRound = async () => {
+  const gameId = getDocumentCookie('gameId');
+  const { data } = await axios.post(`/check-game-status/${gameId}`);
+  console.log('start new round. round & team info', data);
+
+  currentRound = data.currentRound;
+  updateCurrentTeam(data.currentTeam);
+
+  const role = getRoleForCurrentTurn(currentTeam);
+  changeDisplay(gameLobbyDiv).hide();
+  changeDisplay(showScoreDiv).hide();
+  changeDisplay(nextTurnDiv).hide();
+  displayRoleDivs(role);
 };
 
 // ############## DOM MANIPULATION ##############
@@ -649,11 +722,27 @@ gameLobbyStartGameBtn.onclick = submitStartGameplay;
 startTurnBtn.onclick = submitStartTurn;
 skipCardBtn.onclick = submitSkipCard;
 guessedCardBtn.onclick = submitGuessedCard;
-guesserNextBtn.onclick = submitCheckGameStatus;
-waitingTeamNextBtn.onclick = submitCheckGameStatus;
 endRoundStartNextBtn.onclick = submitStartNewRound;
 endGameGoHomeBtn.onclick = () => {
   changeDisplay(showScoreDiv).hide();
+
   changeDisplay(gameSetupSectionDiv).show();
   changeDisplay(gameSetupDiv).show();
+  teamNameDiv.innerHTML = '';
 };
+
+checkAuth();
+
+socket.on('next-team-turn', () => {
+  submitCheckGameStatus();
+  changeDisplay(gameLobbyDiv).hide();
+  changeDisplay(teamTurnOverDiv).show();
+  console.log('NEXT TEAM');
+});
+
+socket.on('round-over', () => {
+  clearTimeout(timerId);
+  submitCheckGameStatus(true);
+  changeDisplay(teamTurnOverDiv).hide();
+  console.log('ROUND OVER');
+});

@@ -1,8 +1,50 @@
 body {
-	background-color: lightgoldenrodyellow;
+	font-family: 'Work Sans', sans-serif;
+
+	background-color: #e36363;
 }
 
-div {
-	background-color: lightsalmon;
-	margin: 10px;
+header {
+	font-family: 'Short Stack';
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: 'Caveat', sans-serif;
+}
+
+button,
+input {
+	font-family: 'Short Stack';
+}
+
+.display-1 {
+	font-size: 4em;
+}
+
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+	font-weight: bold;
+	font-family: 'Short Stack', sans-serif;
+}
+
+.container {
+	background-color: #f0f0f0;
+	min-height: 300px;
+}
+
+.bg-warning {
+	background-color: #f3b153 !important;
+}
+
+.bg-primary {
+	background-color: #689689 !important;
 }

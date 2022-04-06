@@ -63,16 +63,24 @@ export default function initUsersController(db) {
     }
   };
 
-  // const checkAuth = async (req, res) => {
-  //   console.log(req.body);
-  //   const { userId, loginHash } = req.body;
-  //   if (generateHash(Number(userId)) === loginHash) res.send(true);
-  //   else res.send(false);
-  // };
+  const checkAuth = async (req, res) => {
+    res.clearCookie('gameId').clearCookie('teamId');
+    console.log(req.body);
+    const { userId, loginHash } = req.body;
+    if (generateHash(Number(userId)) === loginHash) {
+      const { name } = await db.User.findByPk(userId);
+      res.send({ okay: true, userName: name });
+    } else {
+      res.clearCookie('userId')
+        .clearCookie('userName')
+        .clearCookie('login')
+        .send(false);
+    }
+  };
 
   return {
     create,
     login,
-    // checkAuth,
+    checkAuth,
   };
 }
