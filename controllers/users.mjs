@@ -83,9 +83,19 @@ export default function initUsersController(db) {
     }
   };
 
+  const logout = async (req, res) => {
+    res.clearCookie('gameId')
+      .clearCookie('teamId')
+      .clearCookie('userId')
+      .clearCookie('login')
+      .clearCookie('userName');
+    res.send('logged out');
+  };
+
   return {
     create,
     login,
     checkAuth,
+    logout,
   };
 }

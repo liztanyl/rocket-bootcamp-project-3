@@ -270,8 +270,23 @@ const resetGameIdField = () => {
 };
 
 const updatePlayerNameDiv = (playerName) => {
-  // eslint-disable-next-line no-use-before-define
-  playerNameDiv.innerHTML = `Signed in as: ${playerName}`;
+  const openBracket = document.createElement('small');
+  const closeBracket = document.createElement('small');
+  const logoutSpan = document.createElement('a');
+  openBracket.innerText = ' (';
+  closeBracket.innerText = ')';
+  logoutSpan.innerText = 'Not you?';
+  logoutSpan.classList.add('small', 'link-primary');
+  logoutSpan.href = '/';
+  logoutSpan.onclick = () => {
+    axios.post('/logout').then((response) => {
+      console.log(response.data);
+    });
+  };
+  playerNameDiv.innerHTML = `Signed in as <b>${playerName}</b>`;
+  playerNameDiv.append(openBracket);
+  playerNameDiv.append(logoutSpan);
+  playerNameDiv.append(closeBracket);
 };
 
 const updateTeamNameDiv = (teamName) => {
