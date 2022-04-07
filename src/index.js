@@ -386,12 +386,11 @@ const updateShowScoreDiv = (nextRoundNum, score, teams) => {
  */
 const updateCardInfo = (cardDetails) => {
   const { cardName, cardDescription, cardPoints } = cardDetails;
-  // eslint-disable-next-line no-use-before-define
   cardNameDiv.innerText = cardName;
-  // eslint-disable-next-line no-use-before-define
   cardDescDiv.innerText = cardDescription;
-  // eslint-disable-next-line no-use-before-define
-  cardPointsDiv.innerText = `${cardPoints} points`;
+  cardPointsDiv.innerText = cardPoints === 1
+    ? `${cardPoints} point`
+    : `${cardPoints} points`;
 };
 
 //
