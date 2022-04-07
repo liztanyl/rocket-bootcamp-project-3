@@ -341,6 +341,7 @@ const updateTeamTurnOverDiv = (teamDetails) => {
   <p>That's the end of Team '${teamDetails.previousTeam.name}'s turn!</p>
   <p>Now it's time for Team '${teamDetails.currentTeam.name}' to give it a shot.</p>
   `;
+  changeDisplay(teamTurnOverDiv).show();
 };
 
 const updateShowScoreDiv = (nextRoundNum, score, teams) => {
