@@ -34,6 +34,7 @@ io.on('connection', (socket) => {
   socket.on('end-turn', (gameId) => {
     io.in(`room${gameId}`).emit('next-team-turn');
   });
+  socket.on('disconnect', () => console.log('Client disconnected'));
 });
 
 server.listen(PORT);

@@ -9,9 +9,9 @@ const generateHash = (text) => {
 
 export default function initUsersController(db) {
   const create = async (req, res) => {
-    const { email, password, name } = req.body;
-    const hashedPassword = generateHash(password);
     try {
+      const { email, password, name } = req.body;
+      const hashedPassword = generateHash(password);
       const user = await db.User.create({
         email,
         password: hashedPassword,
@@ -35,11 +35,11 @@ export default function initUsersController(db) {
   };
 
   const login = async (req, res) => {
-    const { email, password } = req.body;
-    res.clearCookie('login')
-      .clearCookie('userId')
-      .clearCookie('userName');
     try {
+      const { email, password } = req.body;
+      res.clearCookie('login')
+        .clearCookie('userId')
+        .clearCookie('userName');
       const user = await db.User.findOne({ where: { email } });
       // if user doesn't exist:
       if (user === null) { throw new Error('no such email'); }
@@ -64,10 +64,10 @@ export default function initUsersController(db) {
   };
 
   const checkAuth = async (req, res) => {
-    res.clearCookie('gameId').clearCookie('teamId');
-    console.log(req.body);
-    const { userId, loginHash } = req.body;
     try {
+      res.clearCookie('gameId').clearCookie('teamId');
+      console.log(req.body);
+      const { userId, loginHash } = req.body;
       if (generateHash(Number(userId)) === loginHash) {
         const { name } = await db.User.findByPk(userId);
         res.send({ okay: true, userName: name });
